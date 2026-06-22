@@ -25,91 +25,9 @@
     </style>
   </head>
   <body>
-    <div id="logo-container"></div>
+    <div id="logo-container" img src="/images/P-LOGO.png"></div>
 
-    <script type="module">
-      import * as THREE from 'https://cdn.skypack.dev/three@0.155.0';
-
-      const container = document.getElementById('logo-container');
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-      camera.position.set(0, 0, 5);
-
-      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      container.appendChild(renderer.domElement);
-
-      const triangleShape = new THREE.BufferGeometry();
-      const triangleSize = 0.2;
-      const triHeight = Math.sqrt(3) * triangleSize / 2;
-      const vertices = new Float32Array([
-        0, triHeight, 0,
-        -triangleSize / 2, 0, 0,
-        triangleSize / 2, 0, 0
-      ]);
-      triangleShape.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-
-      const hexColors = [
-        '#37d1b8', '#38c7c1', '#43d7c7', '#55d5af',
-        '#66d095', '#6adfd4', '#7fcd7a', '#8473cd',
-        '#8eca64', '#94e9e0'
-      ];
-      const colorPalette = hexColors.map(hex => new THREE.Color(hex));
-
-      const count = 300;
-      const material = new THREE.MeshBasicMaterial({ vertexColors: true });
-      const mesh = new THREE.InstancedMesh(triangleShape, material, count);
-      scene.add(mesh);
-
-      const dummy = new THREE.Object3D();
-      const color = new THREE.Color();
-      const colorAttr = new Float32Array(count * 3);
-
-      for (let i = 0; i < count; i++) {
-        const angle = Math.random() * 2 * Math.PI;
-        const radius = 1 + Math.random() * 0.5;
-        const height = (Math.random() - 0.5) * 2;
-
-        dummy.position.set(
-          Math.cos(angle) * radius,
-          height,
-          Math.sin(angle) * radius
-        );
-        dummy.rotation.y = Math.random() * Math.PI;
-        dummy.rotation.z = Math.random() * Math.PI;
-        dummy.updateMatrix();
-        mesh.setMatrixAt(i, dummy.matrix);
-
-        const col = colorPalette[Math.floor(Math.random() * colorPalette.length)];
-        col.toArray(colorAttr, i * 3);
-      }
-
-      mesh.instanceColor = new THREE.InstancedBufferAttribute(colorAttr, 3);
-
-      let rotating = false;
-      container.addEventListener('mousedown', () => rotating = true);
-      window.addEventListener('mouseup', () => rotating = false);
-
-      function animate() {
-        requestAnimationFrame(animate);
-        if (rotating) {
-          mesh.rotation.y += 0.01;
-          mesh.rotation.x += 0.005;
-        }
-        renderer.render(scene, camera);
-      }
-
-      function resizeRenderer() {
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-        renderer.setSize(width, height);
-        camera.aspect = width / height;
-        camera.updateProjectionMatrix();
-      }
-
-      window.addEventListener('resize', resizeRenderer);
-      resizeRenderer();
-      animate();
-    </script>
+    
   </body>
 </html>
 
