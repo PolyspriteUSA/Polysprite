@@ -1,40 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Polysprite</title>
-<link rel="icon" href="/favicon.png" sizes="any">
-
-<style>
-body {
-    margin: 0;
-    background: #000;
-    overflow: hidden;
-}
-
-#logo-container {
-    width: 25vw;
-    aspect-ratio: 1 / 1;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-#logo-container img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-}
-</style>
+  <meta charset="UTF-8" />
+  <title>Hex Triangles</title>
+  <style>body { margin: 0; overflow: hidden; }</style>
 </head>
-
 <body>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.z = 5;
 
-<div id="logo-container">
-    <img src="images/P-LOGO.png" alt="Polysprite Logo">
-</div>
+const renderer = new THREE.WebGLRenderer({antialias: true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+// Utility to convert hex color to RGB
+function hexToRgbArray(hex) {
+  const c = new THREE.Color(hex);
+  return [c.r, c.g, c.b];
+}
+
+// Create custom triangle mesh from vertex positions
+function createTriangleMesh(vertices, color) {
+  const geometry = new THREE.BufferGeometry();
+  const verts = new Float32Array(vertices.flat());
+  geometry.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+  
+  const colors = new Float32Array([...hexToRgbArray(color), ...hexToRgbArray(color), ...hexToRgbArray(color)]);
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  
+  geometry.computeVertexNormals();
+  
+  const material = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  return new THREE.Mesh(geometry, material);
+}
+
+// Equilateral triangle generator
+function createEquilateralTriangle(x, y, size, rotation, color) {
+  const angleOffset = rotation;
+  const verts = [];
+  for (let i = 0; i < 3; i++) {
+    const angle = angleOffset + i * (Math.PI * 2 / 3);
+    verts.push([
+      x + size * Math.cos(angle),
+      y + size * Math.sin(angle),
+      0
+    ]);
+  }
+  return createTriangleMesh(verts, color);
+}
+
+// Color palette from your image
+const palette = [0xA183FF, 0x93E5AB, 0xF47EFF, 0x76D1FF, 0xB1D36B];
+
+// Arrange triangles around center to form hexagonal structure
+const size = 0.5;
+for (let i = 0; i < 6; i++) {
+  const angle = i * (Math.PI / 3);
+  const x = Math.cos(angle) * size;
+  const y = Math.sin(angle) * size;
+  const triangle = createEquilateralTriangle(x, y, size, angle + Math.PI / 6, palette[i % palette.length]);
+  scene.add(triangle);
+}
+
+// Center triangle
+const centerTriangle = createEquilateralTriangle(0, 0, size, 0, 0x76D1FF);
+scene.add(centerTriangle);
+
+function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+animate();
+</script>
 </body>
 </html>
