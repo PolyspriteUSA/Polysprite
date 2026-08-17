@@ -1,33 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Polysprite</title>
-    <style>
-      body {
-        margin: 0;
-        background: #000;
-        overflow: hidden;
-      }
-      #logo-container {
-        width: 25vw;
-        aspect-ratio: 1 / 1;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-      }
-      canvas {
-        width: 100% !important;
-        height: 100% !important;
-        display: block;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="logo-container" img src="/images/P-LOGO.png"></div>
+<head>
+<meta charset="UTF-8">
+<title>Polysprite</title>
 
-    
-  </body>
+<style>
+body {
+    margin: 0;
+    background: #000;
+    overflow: hidden;
+}
+
+#logo-container {
+    width: 25vw;
+    aspect-ratio: 1 / 1;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#logo-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+</style>
+</head>
+
+<body>
+
+<div id="logo-container">
+    <img src="images/P-LOGO.png" alt="Polysprite Logo">
+</div>
+</body>
 </html>
-
