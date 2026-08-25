@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cardboard Robot #5 - Three.js</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #171717;
+      font-family: Arial, sans-serif;
+    }
+    #hud {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 10;
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: #fff;
+      background: rgba(0,0,0,.45);
+      backdrop-filter: blur(8px);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    #hud b { color: #ff5959; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <b>Cardboard Robot #5</b><br>
+    Drag: orbit &nbsp; • &nbsp; Wheel: zoom<br>
+    Space: toggle walk &nbsp; • &nbsp; T: T-pose
+  </div>
+
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js';
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x171717);
+
+    const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 100);
+    camera.position.set(5.2, 3.5, 7.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1.8, 0);
+    controls.enableDamping = true;
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x222222, 2.0));
+    const key = new THREE.DirectionalLight(0xffffff, 3.0);
+    key.position.set(4, 7, 5);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    scene.add(key);
+
+    const rim = new THREE.DirectionalLight(0xffd7b0, 1.2);
+    rim.position.set(-4, 4, -3);
+    scene.add(rim);
+
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(30, 30),
+      new THREE.MeshStandardMaterial({ color: 0x242424, roughness: 1 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // --- Materials ---
+    const cardboard = new THREE.MeshStandardMaterial({
+      color: 0xb88b52,
+      roughness: 0.96,
+      metalness: 0.0
+    });
+
+    const cardboardDark = new THREE.MeshStandardMaterial({
+      color: 0x8f6337,
+      roughness: 0.98
+    });
+
+    const tapeMat = new THREE.MeshStandardMaterial({
+      color: 0xc9b79b,
+      roughness: 0.85
+    });
+
+    const jointMat = new THREE.MeshStandardMaterial({
+      color: 0x26231f,
+      roughness: 0.7,
+      metalness: 0.45
+    });
+
+    const redMat = new THREE.MeshStandardMaterial({
+      color: 0xc82f2f,
+      roughness: 0.8
+    });
+
+    const blackMat = new THREE.MeshStandardMaterial({
+      color: 0x090909,
+      roughness: 0.55
+    });
+
+    function box(w,h,d, mat=cardboard) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+      m.castShadow = m.receiveShadow = true;
+      return m;
+    }
+
+    function cylinder(r, h, mat=jointMat) {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,24), mat);
+      m.castShadow = m.receiveShadow = true;
+      return m;
+    }
+
+    function tapePatch(parent, x,y,z, sx,sy,sz=0.012, rz=0) {
+      const t = box(sx,sy,sz,tapeMat);
+      t.position.set(x,y,z);
+      t.rotation.z = rz;
+      parent.add(t);
+    }
+
+    // --- Robot hierarchy: all cardboard pieces remain rigid ---
+    const robot = new THREE.Group();
+    robot.position.y = 0.02;
+    scene.add(robot);
+
+    const torso = box(1.55, 1.65, 0.62);
+    torso.position.y = 2.35;
+    robot.add(torso);
+
+    // slight homemade tilt
+    torso.rotation.z = THREE.MathUtils.degToRad(-2);
+
+    // taped corners
+    [
+      [-.63,.68,.318], [.63,.68,.318], [-.63,-.68,.318], [.63,-.68,.318]
+    ].forEach(([x,y,z]) => tapePatch(torso,x,y,z,.25,.12,.014,0.2));
+
+    // chest fragile icon card
+    const icon = box(0.26,0.26,0.025, new THREE.MeshStandardMaterial({color:0xe2cf9e, roughness:1}));
+    icon.position.set(-0.52,0.52,0.335);
+    torso.add(icon);
+
+    // Heart graphic from simple geometry
+    const heart = new THREE.Group();
+    heart.position.set(0.05, 0.08, 0.335);
+    torso.add(heart);
+
+    const heartShape = new THREE.Shape();
+    heartShape.moveTo(0, -0.42);
+    heartShape.bezierCurveTo(-0.55,-0.08,-0.60,0.35,-0.28,0.44);
+    heartShape.bezierCurveTo(-0.08,0.50,0,0.34,0,0.24);
+    heartShape.bezierCurveTo(0,0.34,0.08,0.50,0.28,0.44);
+    heartShape.bezierCurveTo(0.60,0.35,0.55,-0.08,0,-0.42);
+    const heartMesh = new THREE.Mesh(
+      new THREE.ShapeGeometry(heartShape, 32),
+      redMat
+    );
+    heartMesh.scale.set(.9,.9,.9);
+    heart.add(heartMesh);
+
+    // neck
+    const neck = cylinder(0.18, 0.26);
+    neck.rotation.x = Math.PI/2;
+    neck.position.y = 3.31;
+    robot.add(neck);
+
+    // head
+    const head = box(1.65, 0.88, 0.72);
+    head.position.set(0.05, 3.82, 0);
+    head.rotation.z = THREE.MathUtils.degToRad(-4);
+    robot.add(head);
+
+    // eyes
+    function eye(x) {
+      const e = cylinder(0.12,0.08,blackMat);
+      e.rotation.x = Math.PI/2;
+      e.position.set(x,0.12,0.39);
+      head.add(e);
+    }
+    eye(-0.38); eye(0.38);
+
+    // tiny nose
+    const nose = new THREE.Mesh(
+      new THREE.ConeGeometry(0.045,0.09,3),
+      blackMat
+    );
+    nose.position.set(0,-0.05,0.39);
+    nose.rotation.z = Math.PI;
+    head.add(nose);
+
+    // zigzag mouth
+    const mouthPts = [];
+    for (let i=0;i<9;i++) {
+      mouthPts.push(new THREE.Vector3(-0.40 + i*0.10, -0.22 + (i%2? -0.05 : 0.05), 0.39));
+    }
+    const mouthGeo = new THREE.BufferGeometry().setFromPoints(mouthPts);
+    const mouth = new THREE.Line(
+      mouthGeo,
+      new THREE.LineBasicMaterial({ color: 0x111111 })
+    );
+    head.add(mouth);
+
+    // side ear disks
+    [-1,1].forEach(s => {
+      const ear = cylinder(0.17,0.07,jointMat);
+      ear.rotation.z = Math.PI/2;
+      ear.position.set(s*0.86,0,0);
+      head.add(ear);
+    });
+
+    // limb factory
+    const joints = {};
+    function makeArm(side) {
+      const sign = side === 'L' ? -1 : 1;
+      const shoulder = new THREE.Group();
+      shoulder.position.set(sign*0.86, 2.82, 0);
+      robot.add(shoulder);
+
+      const shoulderJoint = cylinder(0.16,0.24);
+      shoulderJoint.rotation.z = Math.PI/2;
+      shoulder.add(shoulderJoint);
+
+      const upper = box(0.68,0.28,0.30);
+      upper.position.x = sign*0.43;
+      shoulder.add(upper);
+
+      const band = box(0.15,0.30,0.32,redMat);
+      band.position.x = sign*0.50;
+      shoulder.add(band);
+
+      const elbow = new THREE.Group();
+      elbow.position.x = sign*0.78;
+      shoulder.add(elbow);
+
+      const elbowJoint = cylinder(0.13,0.18);
+      elbowJoint.rotation.z = Math.PI/2;
+      elbow.add(elbowJoint);
+
+      const fore = box(0.60,0.25,0.28);
+      fore.position.x = sign*0.38;
+      elbow.add(fore);
+
+      const wrist = new THREE.Group();
+      wrist.position.x = sign*0.72;
+      elbow.add(wrist);
+
+      // simple 3-finger cardboard hand
+      const palm = box(0.18,0.16,0.22, cardboardDark);
+      palm.position.x = sign*0.10;
+      wrist.add(palm);
+
+      for (let i=-1;i<=1;i++) {
+        const finger = box(0.22,0.055,0.065);
+        finger.position.set(sign*0.25, i*0.08, 0);
+        wrist.add(finger);
+      }
+
+      joints[side+'Shoulder'] = shoulder;
+      joints[side+'Elbow'] = elbow;
+      joints[side+'Wrist'] = wrist;
+    }
+
+    makeArm('L');
+    makeArm('R');
+
+    function makeLeg(side) {
+      const sign = side === 'L' ? -1 : 1;
+      const hip = new THREE.Group();
+      hip.position.set(sign*0.43,1.48,0);
+      robot.add(hip);
+
+      const hipJoint = cylinder(0.18,0.18);
+      hipJoint.rotation.x = Math.PI/2;
+      hip.add(hipJoint);
+
+      const thigh = box(0.38,0.72,0.42);
+      thigh.position.y = -0.45;
+      hip.add(thigh);
+
+      const knee = new THREE.Group();
+      knee.position.y = -0.84;
+      hip.add(knee);
+
+      const kneeJoint = cylinder(0.16,0.18);
+      kneeJoint.rotation.x = Math.PI/2;
+      knee.add(kneeJoint);
+
+      const shin = box(0.40,0.72,0.44);
+      shin.position.y = -0.45;
+      knee.add(shin);
+
+      const ankle = new THREE.Group();
+      ankle.position.y = -0.84;
+      knee.add(ankle);
+
+      const foot = box(0.48,0.32,0.88);
+      foot.position.set(0,-0.16,0.18);
+      ankle.add(foot);
+
+      joints[side+'Hip'] = hip;
+      joints[side+'Knee'] = knee;
+      joints[side+'Ankle'] = ankle;
+    }
+
+    makeLeg('L');
+    makeLeg('R');
+
+    // Make #5 slightly asymmetrical / handmade
+    joints.LShoulder.rotation.x = THREE.MathUtils.degToRad(2);
+    joints.RShoulder.rotation.x = THREE.MathUtils.degToRad(-1);
+
+    let walking = true;
+    const clock = new THREE.Clock();
+
+    function setTPose() {
+      walking = false;
+      joints.LShoulder.rotation.set(0,0,0);
+      joints.RShoulder.rotation.set(0,0,0);
+      joints.LElbow.rotation.set(0,0,0);
+      joints.RElbow.rotation.set(0,0,0);
+      joints.LHip.rotation.set(0,0,0);
+      joints.RHip.rotation.set(0,0,0);
+      joints.LKnee.rotation.set(0,0,0);
+      joints.RKnee.rotation.set(0,0,0);
+    }
+
+    addEventListener('keydown', e => {
+      if (e.code === 'Space') walking = !walking;
+      if (e.key.toLowerCase() === 't') setTPose();
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      if (walking) {
+        const swing = Math.sin(t*3.2);
+        joints.LShoulder.rotation.z = 0.18 * swing;
+        joints.RShoulder.rotation.z = -0.18 * swing;
+        joints.LHip.rotation.x = -0.30 * swing;
+        joints.RHip.rotation.x = 0.30 * swing;
+        joints.LKnee.rotation.x = Math.max(0, 0.35 * -swing);
+        joints.RKnee.rotation.x = Math.max(0, 0.35 * swing);
+        torso.position.y = 2.35 + Math.abs(Math.sin(t*3.2))*0.035;
+      }
+
+      controls.update();
+      renderer.render(scene,camera);
+    }
+
+    animate();
+
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth,innerHeight);
+    });
+  </script>
+</body>
+</html>
