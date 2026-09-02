@@ -1,370 +1,113 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cardboard Robot #5 - Three.js</title>
-  <style>
-    html, body {
-      margin: 0;
-      height: 100%;
-      overflow: hidden;
-      background: #171717;
-      font-family: Arial, sans-serif;
-    }
-    #hud {
-      position: fixed;
-      top: 14px;
-      left: 14px;
-      z-index: 10;
-      padding: 10px 12px;
-      border-radius: 10px;
-      color: #fff;
-      background: rgba(0,0,0,.45);
-      backdrop-filter: blur(8px);
-      font-size: 14px;
-      line-height: 1.4;
-    }
-    #hud b { color: #ff5959; }
-    canvas { display: block; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Cardboard Robot</title>
+<style>
+:root{--ink:#251a13;--card:#b77d46;--paper:#ead9ba;--panel:#d2a66c;--tape:#dccb9d;--accent:#efc768}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#cab692;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink)}
+#game{display:block;width:100%;height:100%;touch-action:none;background:#d8c9aa}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#hud{position:fixed;left:16px;top:14px;z-index:4;display:none;gap:10px;pointer-events:none}.tag{background:rgba(239,220,187,.9);border:2px solid #3a281d;padding:7px 10px;font-size:12px;font-weight:900;text-transform:uppercase;box-shadow:4px 4px 0 rgba(50,32,20,.18)}
+#brand{position:fixed;right:16px;top:14px;z-index:4;background:#b77d46;border:2px solid #3a281d;padding:7px 10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;box-shadow:4px 4px 0 rgba(50,32,20,.18);pointer-events:none}
+#hint{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:4;display:none;background:rgba(239,220,187,.9);border:2px solid #3a281d;padding:7px 10px;font-size:11px;font-weight:900;white-space:nowrap;box-shadow:4px 4px 0 rgba(50,32,20,.18);pointer-events:none}
+#screen{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:rgba(47,33,22,.18);backdrop-filter:blur(2px)}
+#menu{width:min(920px,92vw);max-height:88vh;overflow:auto;background:#d3aa73;border:4px solid #3a281d;box-shadow:12px 12px 0 rgba(47,31,20,.25);padding:24px}
+#menu h1{margin:0;text-transform:uppercase;letter-spacing:.08em;font-size:clamp(28px,5vw,54px)}#menu .lead{margin:8px 0 20px;font-weight:800;line-height:1.45}
+#characters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.char{appearance:none;-webkit-appearance:none;text-align:left;background:#c39258;border:3px solid #3a281d;color:inherit;padding:10px;cursor:pointer;box-shadow:5px 5px 0 #76502f;min-width:0}.char:hover,.char.selected{background:#e0be7b;transform:translateY(-2px)}.char canvas{display:block;width:100%;height:auto;aspect-ratio:10/9;touch-action:manipulation;background:#dec79e;border:2px solid rgba(58,40,29,.55)}.char strong{display:block;margin-top:8px;text-transform:uppercase}.char span{font-size:11px;font-weight:800;opacity:.8}
+#actions{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:18px;flex-wrap:wrap}#play{position:relative;z-index:2;-webkit-appearance:none;font:inherit;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#251a13;background:#efc768;border:3px solid #3a281d;padding:13px 20px;box-shadow:5px 5px 0 #76502f;cursor:pointer}#play:active{transform:translate(3px,3px);box-shadow:2px 2px 0 #76502f}.small{font-size:11px;font-weight:800;max-width:520px;line-height:1.4}
+#result{display:none;text-align:center}#result h2{font-size:42px;margin:0 0 8px;text-transform:uppercase}#result button{font:inherit;font-weight:900;text-transform:uppercase;background:#efc768;border:3px solid #3a281d;padding:12px 18px;box-shadow:5px 5px 0 #76502f;cursor:pointer}
+@media(max-width:720px){#characters{grid-template-columns:repeat(2,minmax(0,1fr))}#menu{padding:16px;max-height:calc(100dvh - 24px);-webkit-overflow-scrolling:touch}#actions{display:block}#play{display:block;width:100%;min-height:52px;margin-top:14px}#hint{font-size:9px}.tag{font-size:10px}}
+</style>
 </head>
 <body>
-  <div id="hud">
-    <b>Cardboard Robot #5</b><br>
-    Drag: orbit &nbsp; • &nbsp; Wheel: zoom<br>
-    Space: toggle walk &nbsp; • &nbsp; T: T-pose
-  </div>
+<div id="hud"><div class="tag" id="bolts">bolts 0 / 10</div><div class="tag" id="lives">tape 3</div><div class="tag" id="robotName">robot</div></div>
+<div id="brand">Cardboard Robot</div>
+<div id="hint">A / D or ← / → move • SPACE / W / ↑ jump • R restart • ESC character select</div>
+<canvas id="game"></canvas>
+<div id="screen">
+  <section id="menu">
+    <div id="selectView">
+      <h1>Choose your robot</h1>
+      <p class="lead">Pick a cardboard hero, then enter the procedural warehouse. Every visible game asset is drawn by a replaceable renderer so we can swap in final art later.</p>
+      <div id="characters"></div>
+      <div id="actions"><div class="small">Prototype art: procedural Canvas 2D. Later: replace any renderer with PNG/WebP sprites, sprite sheets, or a Three.js/GLB layer without changing movement, collision, enemies, collectibles, or level data.</div><button id="play">Start Game</button></div>
+    </div>
+    <div id="result"><h2 id="resultTitle">Level Complete</h2><p id="resultText"></p><button id="again">Play Again</button></div>
+  </section>
+</div>
+<script>
+(()=>{'use strict';
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const screen=document.getElementById('screen'),selectView=document.getElementById('selectView'),result=document.getElementById('result');
+const hud=document.getElementById('hud'),hint=document.getElementById('hint'),boltsEl=document.getElementById('bolts'),livesEl=document.getElementById('lives'),robotNameEl=document.getElementById('robotName');
+let W=innerWidth,H=innerHeight,DPR=1,state='select',selected=0,last=performance.now(),camX=0,camY=0;
+function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=W*DPR;canvas.height=H*DPR;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0)} addEventListener('resize',resize);resize();
 
-  <script type="module">
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
-    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js';
+// ---------- ASSET SWAP LAYER ----------
+// Gameplay calls these functions only. Replace any function later with image/GLB rendering.
+const Assets={
+  drawPlayer:(g,p,robot)=>drawRobot(g,p.x-camX,p.y-camY,p.w,p.h,robot,p.facing,p.anim,p.invuln),
+  drawEnemy:(g,e)=>drawEnemyRobot(g,e.x-camX,e.y-camY,e.w,e.h),
+  drawPlatform:(g,p)=>drawPlatform(g,p.x-camX,p.y-camY,p.w,p.h),
+  drawHazard:(g,s)=>drawSpikes(g,s.x-camX,s.y-camY,s.w,s.h),
+  drawCollectible:(g,b)=>drawBolt(g,b.x-camX,b.y-camY,b.t),
+  drawGoal:(g,x,y)=>drawGoal(g,x-camX,y-camY)
+};
+const ROBOTS=[
+{name:'Patch',body:'#b67a43',panel:'#d7aa72',tape:'#dfcfaa',eye:'#1f211f',mark:'P',desc:'balanced explorer'},
+{name:'Crate',body:'#986237',panel:'#c58d55',tape:'#e5d6b5',eye:'#37261b',mark:'C',desc:'heavy box bot'},
+{name:'Fold',body:'#c7955d',panel:'#e0b881',tape:'#ceb98d',eye:'#20221f',mark:'F',desc:'quick prototype'},
+];
 
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x171717);
+const previews=document.getElementById('characters');
+function bindTap(el,handler){let lastTouch=0;el.addEventListener('touchend',e=>{lastTouch=Date.now();e.preventDefault();handler(e)},{passive:false});el.addEventListener('click',e=>{if(Date.now()-lastTouch<700)return;handler(e)})}
+ROBOTS.forEach((r,i)=>{const b=document.createElement('button');b.className='char'+(i===0?' selected':'');b.type='button';const pc=document.createElement('canvas');pc.width=200;pc.height=180;b.appendChild(pc);const strong=document.createElement('strong');strong.textContent=r.name;b.appendChild(strong);const sp=document.createElement('span');sp.textContent=r.desc;b.appendChild(sp);bindTap(b,()=>{selected=i;Array.prototype.forEach.call(previews.children,(n,j)=>n.classList.toggle('selected',j===i))});previews.appendChild(b);const pg=pc.getContext('2d');pg.fillStyle='#dec79e';pg.fillRect(0,0,200,180);drawRobot(pg,68,24,64,118,r,1,.4,0,true)});
 
-    const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 100);
-    camera.position.set(5.2, 3.5, 7.5);
+const playButton=document.getElementById('play'),againButton=document.getElementById('again');
+bindTap(playButton,startGame);bindTap(againButton,showSelect);
+function showSelect(){state='select';screen.style.display='flex';selectView.style.display='block';result.style.display='none';hud.style.display='none';hint.style.display='none'}
+function showResult(title,text){state='result';document.getElementById('resultTitle').textContent=title;document.getElementById('resultText').textContent=text;screen.style.display='flex';selectView.style.display='none';result.style.display='block';hud.style.display='none';hint.style.display='none'}
+function startGame(){if(state==='playing')return;resetWorld();state='playing';screen.style.display='none';hud.style.display='flex';hint.style.display='block';robotNameEl.textContent=ROBOTS[selected].name;last=performance.now();canvas.focus({preventScroll:true})}
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    renderer.setSize(innerWidth, innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    document.body.appendChild(renderer.domElement);
+const WORLD_W=6200,FLOOR=760;
+const platformSeed=[[-250,FLOOR,1050,160],[900,665,340,44],[1320,575,300,44],[1690,695,470,90],[2240,600,310,44],[2630,510,350,44],[3070,670,550,90],[3700,590,320,44],[4090,500,330,44],[4510,645,510,100],[5100,555,360,44],[5540,665,300,44],[5920,FLOOR,520,160]];
+const spikeSeed=[[760,FLOOR-26,125,26],[1250,FLOOR-26,95,26],[2160,FLOOR-26,100,26],[2960,FLOOR-26,115,26],[3590,FLOOR-26,125,26],[4410,FLOOR-26,110,26],[5010,FLOOR-26,100,26],[5835,FLOOR-26,90,26]];
+const boltSeed=[[365,635],[1050,590],[1450,500],[1910,610],[2390,520],[2790,430],[3300,590],[3870,510],[4250,420],[5280,470]];
+const enemySeed=[{x:1770,y:645,min:1740,max:2070},{x:3150,y:620,min:3120,max:3520},{x:4570,y:595,min:4540,max:4940},{x:5160,y:505,min:5130,max:5400}];
+let platforms=[],spikes=[],bolts=[],enemies=[];
+const player={x:120,y:590,w:58,h:96,vx:0,vy:0,onGround:false,coyote:0,jumpBuffer:0,facing:1,anim:0,lives:3,got:0,invuln:0,spawnX:120,spawnY:590};
+function resetWorld(){platforms=platformSeed.map(v=>({x:v[0],y:v[1],w:v[2],h:v[3]}));spikes=spikeSeed.map(v=>({x:v[0],y:v[1],w:v[2],h:v[3]}));bolts=boltSeed.map((v,i)=>({x:v[0],y:v[1],t:i*.6,got:false}));enemies=enemySeed.map((e,i)=>({...e,w:58,h:48,vx:(i%2? -1:1)*62,alive:true}));Object.assign(player,{x:120,y:590,vx:0,vy:0,onGround:false,coyote:0,jumpBuffer:0,facing:1,anim:0,lives:3,got:0,invuln:0});camX=0;camY=0;updateHUD()}
+function updateHUD(){boltsEl.textContent=`bolts ${player.got} / ${bolts.length}`;livesEl.textContent=`tape ${player.lives}`}
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.set(0, 1.8, 0);
-    controls.enableDamping = true;
+const keys={};addEventListener('keydown',e=>{keys[e.code]=true;if(['ArrowLeft','ArrowRight','ArrowUp','Space'].includes(e.code))e.preventDefault();if(e.code==='KeyR'&&state==='playing')resetWorld();if(e.code==='Escape'&&state==='playing')showSelect()},{passive:false});addEventListener('keyup',e=>keys[e.code]=false);
+let touchDir=0,touchJump=false;canvas.addEventListener('pointerdown',e=>{if(state!=='playing')return;if(e.clientX>W*.62)touchJump=true;else touchDir=e.clientX<W*.31?-1:1});canvas.addEventListener('pointerup',()=>{touchDir=0;touchJump=false});canvas.addEventListener('pointercancel',()=>{touchDir=0;touchJump=false});
+function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function damage(){if(player.invuln>0||state!=='playing')return;player.lives--;updateHUD();if(player.lives<=0){showResult('Flattened!','Your robot ran out of packing tape.');return}player.x=Math.max(40,player.x-135);player.y=Math.min(player.y,500);player.vx=-220;player.vy=-360;player.invuln=1.35}
+function update(dt){if(state!=='playing')return;player.invuln=Math.max(0,player.invuln-dt);const left=keys.ArrowLeft||keys.KeyA||touchDir<0,right=keys.ArrowRight||keys.KeyD||touchDir>0,jump=keys.Space||keys.ArrowUp||keys.KeyW||touchJump,input=(right?1:0)-(left?1:0);player.vx+=input*(player.onGround?2200:1250)*dt;if(!input)player.vx*=Math.pow(player.onGround ? .0005 : .07,dt);player.vx=clamp(player.vx,-350,350);if(input)player.facing=input;
+player.jumpBuffer = jump ? .12 : Math.max(0, player.jumpBuffer-dt);player.coyote = player.onGround ? .12 : Math.max(0, player.coyote-dt);if(player.jumpBuffer>0&&player.coyote>0){player.vy=-590;player.onGround=false;player.coyote=0;player.jumpBuffer=0}if(!jump&&player.vy<0)player.vy+=1100*dt;player.vy=Math.min(player.vy+1500*dt,900);
+player.x+=player.vx*dt;for(const p of platforms)if(overlap(player,p)){if(player.vx>0)player.x=p.x-player.w;else if(player.vx<0)player.x=p.x+p.w;player.vx=0}player.y+=player.vy*dt;player.onGround=false;for(const p of platforms)if(overlap(player,p)){if(player.vy>0){player.y=p.y-player.h;player.vy=0;player.onGround=true}else if(player.vy<0){player.y=p.y+p.h;player.vy=0}}if(player.y>980)damage();for(const s of spikes)if(overlap(player,s))damage();
+for(const b of bolts){if(b.got)continue;b.t+=dt*3;if(overlap(player,{x:b.x-15,y:b.y-15,w:30,h:30})){b.got=true;player.got++;updateHUD()}}
+for(const e of enemies){if(!e.alive)continue;e.x+=e.vx*dt;if(e.x<e.min){e.x=e.min;e.vx=Math.abs(e.vx)}if(e.x>e.max){e.x=e.max;e.vx=-Math.abs(e.vx)}if(overlap(player,e)){if(player.vy>120&&player.y+player.h-e.y<28){e.alive=false;player.vy=-370}else damage()}}
+if(player.x>6035){showResult(player.got===bolts.length?'Box Hero!':'Level Complete!',`You recovered ${player.got} of ${bolts.length} bolts.`)}player.anim+=Math.abs(player.vx)*dt*.025;const targetX=player.x-W*.34;camX+=((targetX)-camX)*Math.min(1,dt*5.5);camX=clamp(camX,0,Math.max(0,WORLD_W-W));const targetY=Math.max(0,player.y-H*.55);camY+=((targetY)-camY)*Math.min(1,dt*3);camY=clamp(camY,0,190)}
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x222222, 2.0));
-    const key = new THREE.DirectionalLight(0xffffff, 3.0);
-    key.position.set(4, 7, 5);
-    key.castShadow = true;
-    key.shadow.mapSize.set(2048, 2048);
-    scene.add(key);
-
-    const rim = new THREE.DirectionalLight(0xffd7b0, 1.2);
-    rim.position.set(-4, 4, -3);
-    scene.add(rim);
-
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(30, 30),
-      new THREE.MeshStandardMaterial({ color: 0x242424, roughness: 1 })
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    scene.add(floor);
-
-    // --- Materials ---
-    const cardboard = new THREE.MeshStandardMaterial({
-      color: 0xb88b52,
-      roughness: 0.96,
-      metalness: 0.0
-    });
-
-    const cardboardDark = new THREE.MeshStandardMaterial({
-      color: 0x8f6337,
-      roughness: 0.98
-    });
-
-    const tapeMat = new THREE.MeshStandardMaterial({
-      color: 0xc9b79b,
-      roughness: 0.85
-    });
-
-    const jointMat = new THREE.MeshStandardMaterial({
-      color: 0x26231f,
-      roughness: 0.7,
-      metalness: 0.45
-    });
-
-    const redMat = new THREE.MeshStandardMaterial({
-      color: 0xc82f2f,
-      roughness: 0.8
-    });
-
-    const blackMat = new THREE.MeshStandardMaterial({
-      color: 0x090909,
-      roughness: 0.55
-    });
-
-    function box(w,h,d, mat=cardboard) {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
-      m.castShadow = m.receiveShadow = true;
-      return m;
-    }
-
-    function cylinder(r, h, mat=jointMat) {
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,24), mat);
-      m.castShadow = m.receiveShadow = true;
-      return m;
-    }
-
-    function tapePatch(parent, x,y,z, sx,sy,sz=0.012, rz=0) {
-      const t = box(sx,sy,sz,tapeMat);
-      t.position.set(x,y,z);
-      t.rotation.z = rz;
-      parent.add(t);
-    }
-
-    // --- Robot hierarchy: all cardboard pieces remain rigid ---
-    const robot = new THREE.Group();
-    robot.position.y = 0.02;
-    scene.add(robot);
-
-    const torso = box(1.55, 1.65, 0.62);
-    torso.position.y = 2.35;
-    robot.add(torso);
-
-    // slight homemade tilt
-    torso.rotation.z = THREE.MathUtils.degToRad(-2);
-
-    // taped corners
-    [
-      [-.63,.68,.318], [.63,.68,.318], [-.63,-.68,.318], [.63,-.68,.318]
-    ].forEach(([x,y,z]) => tapePatch(torso,x,y,z,.25,.12,.014,0.2));
-
-    // chest fragile icon card
-    const icon = box(0.26,0.26,0.025, new THREE.MeshStandardMaterial({color:0xe2cf9e, roughness:1}));
-    icon.position.set(-0.52,0.52,0.335);
-    torso.add(icon);
-
-    // Heart graphic from simple geometry
-    const heart = new THREE.Group();
-    heart.position.set(0.05, 0.08, 0.335);
-    torso.add(heart);
-
-    const heartShape = new THREE.Shape();
-    heartShape.moveTo(0, -0.42);
-    heartShape.bezierCurveTo(-0.55,-0.08,-0.60,0.35,-0.28,0.44);
-    heartShape.bezierCurveTo(-0.08,0.50,0,0.34,0,0.24);
-    heartShape.bezierCurveTo(0,0.34,0.08,0.50,0.28,0.44);
-    heartShape.bezierCurveTo(0.60,0.35,0.55,-0.08,0,-0.42);
-    const heartMesh = new THREE.Mesh(
-      new THREE.ShapeGeometry(heartShape, 32),
-      redMat
-    );
-    heartMesh.scale.set(.9,.9,.9);
-    heart.add(heartMesh);
-
-    // neck
-    const neck = cylinder(0.18, 0.26);
-    neck.rotation.x = Math.PI/2;
-    neck.position.y = 3.31;
-    robot.add(neck);
-
-    // head
-    const head = box(1.65, 0.88, 0.72);
-    head.position.set(0.05, 3.82, 0);
-    head.rotation.z = THREE.MathUtils.degToRad(-4);
-    robot.add(head);
-
-    // eyes
-    function eye(x) {
-      const e = cylinder(0.12,0.08,blackMat);
-      e.rotation.x = Math.PI/2;
-      e.position.set(x,0.12,0.39);
-      head.add(e);
-    }
-    eye(-0.38); eye(0.38);
-
-    // tiny nose
-    const nose = new THREE.Mesh(
-      new THREE.ConeGeometry(0.045,0.09,3),
-      blackMat
-    );
-    nose.position.set(0,-0.05,0.39);
-    nose.rotation.z = Math.PI;
-    head.add(nose);
-
-    // zigzag mouth
-    const mouthPts = [];
-    for (let i=0;i<9;i++) {
-      mouthPts.push(new THREE.Vector3(-0.40 + i*0.10, -0.22 + (i%2? -0.05 : 0.05), 0.39));
-    }
-    const mouthGeo = new THREE.BufferGeometry().setFromPoints(mouthPts);
-    const mouth = new THREE.Line(
-      mouthGeo,
-      new THREE.LineBasicMaterial({ color: 0x111111 })
-    );
-    head.add(mouth);
-
-    // side ear disks
-    [-1,1].forEach(s => {
-      const ear = cylinder(0.17,0.07,jointMat);
-      ear.rotation.z = Math.PI/2;
-      ear.position.set(s*0.86,0,0);
-      head.add(ear);
-    });
-
-    // limb factory
-    const joints = {};
-    function makeArm(side) {
-      const sign = side === 'L' ? -1 : 1;
-      const shoulder = new THREE.Group();
-      shoulder.position.set(sign*0.86, 2.82, 0);
-      robot.add(shoulder);
-
-      const shoulderJoint = cylinder(0.16,0.24);
-      shoulderJoint.rotation.z = Math.PI/2;
-      shoulder.add(shoulderJoint);
-
-      const upper = box(0.68,0.28,0.30);
-      upper.position.x = sign*0.43;
-      shoulder.add(upper);
-
-      const band = box(0.15,0.30,0.32,redMat);
-      band.position.x = sign*0.50;
-      shoulder.add(band);
-
-      const elbow = new THREE.Group();
-      elbow.position.x = sign*0.78;
-      shoulder.add(elbow);
-
-      const elbowJoint = cylinder(0.13,0.18);
-      elbowJoint.rotation.z = Math.PI/2;
-      elbow.add(elbowJoint);
-
-      const fore = box(0.60,0.25,0.28);
-      fore.position.x = sign*0.38;
-      elbow.add(fore);
-
-      const wrist = new THREE.Group();
-      wrist.position.x = sign*0.72;
-      elbow.add(wrist);
-
-      // simple 3-finger cardboard hand
-      const palm = box(0.18,0.16,0.22, cardboardDark);
-      palm.position.x = sign*0.10;
-      wrist.add(palm);
-
-      for (let i=-1;i<=1;i++) {
-        const finger = box(0.22,0.055,0.065);
-        finger.position.set(sign*0.25, i*0.08, 0);
-        wrist.add(finger);
-      }
-
-      joints[side+'Shoulder'] = shoulder;
-      joints[side+'Elbow'] = elbow;
-      joints[side+'Wrist'] = wrist;
-    }
-
-    makeArm('L');
-    makeArm('R');
-
-    function makeLeg(side) {
-      const sign = side === 'L' ? -1 : 1;
-      const hip = new THREE.Group();
-      hip.position.set(sign*0.43,1.48,0);
-      robot.add(hip);
-
-      const hipJoint = cylinder(0.18,0.18);
-      hipJoint.rotation.x = Math.PI/2;
-      hip.add(hipJoint);
-
-      const thigh = box(0.38,0.72,0.42);
-      thigh.position.y = -0.45;
-      hip.add(thigh);
-
-      const knee = new THREE.Group();
-      knee.position.y = -0.84;
-      hip.add(knee);
-
-      const kneeJoint = cylinder(0.16,0.18);
-      kneeJoint.rotation.x = Math.PI/2;
-      knee.add(kneeJoint);
-
-      const shin = box(0.40,0.72,0.44);
-      shin.position.y = -0.45;
-      knee.add(shin);
-
-      const ankle = new THREE.Group();
-      ankle.position.y = -0.84;
-      knee.add(ankle);
-
-      const foot = box(0.48,0.32,0.88);
-      foot.position.set(0,-0.16,0.18);
-      ankle.add(foot);
-
-      joints[side+'Hip'] = hip;
-      joints[side+'Knee'] = knee;
-      joints[side+'Ankle'] = ankle;
-    }
-
-    makeLeg('L');
-    makeLeg('R');
-
-    // Make #5 slightly asymmetrical / handmade
-    joints.LShoulder.rotation.x = THREE.MathUtils.degToRad(2);
-    joints.RShoulder.rotation.x = THREE.MathUtils.degToRad(-1);
-
-    let walking = true;
-    const clock = new THREE.Clock();
-
-    function setTPose() {
-      walking = false;
-      joints.LShoulder.rotation.set(0,0,0);
-      joints.RShoulder.rotation.set(0,0,0);
-      joints.LElbow.rotation.set(0,0,0);
-      joints.RElbow.rotation.set(0,0,0);
-      joints.LHip.rotation.set(0,0,0);
-      joints.RHip.rotation.set(0,0,0);
-      joints.LKnee.rotation.set(0,0,0);
-      joints.RKnee.rotation.set(0,0,0);
-    }
-
-    addEventListener('keydown', e => {
-      if (e.code === 'Space') walking = !walking;
-      if (e.key.toLowerCase() === 't') setTPose();
-    });
-
-    function animate() {
-      requestAnimationFrame(animate);
-      const t = clock.getElapsedTime();
-
-      if (walking) {
-        const swing = Math.sin(t*3.2);
-        joints.LShoulder.rotation.z = 0.18 * swing;
-        joints.RShoulder.rotation.z = -0.18 * swing;
-        joints.LHip.rotation.x = -0.30 * swing;
-        joints.RHip.rotation.x = 0.30 * swing;
-        joints.LKnee.rotation.x = Math.max(0, 0.35 * -swing);
-        joints.RKnee.rotation.x = Math.max(0, 0.35 * swing);
-        torso.position.y = 2.35 + Math.abs(Math.sin(t*3.2))*0.035;
-      }
-
-      controls.update();
-      renderer.render(scene,camera);
-    }
-
-    animate();
-
-    addEventListener('resize', () => {
-      camera.aspect = innerWidth/innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(innerWidth,innerHeight);
-    });
-  </script>
+function line(x1,y1,x2,y2,c='#3b291d',w=2){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}function rect(g,x,y,w,h,fill,stroke='#3b291d',lw=2){g.fillStyle=fill;g.fillRect(x,y,w,h);g.strokeStyle=stroke;g.lineWidth=lw;g.strokeRect(x,y,w,h)}function poly(g,pts,fill,stroke='#3b291d',lw=2){g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.closePath();g.fillStyle=fill;g.fill();g.strokeStyle=stroke;g.lineWidth=lw;g.stroke()}
+function texture(g,x,y,w,h){g.save();g.globalAlpha=.14;g.strokeStyle='#6e4a2d';g.lineWidth=1;for(let yy=y+6;yy<y+h;yy+=8){g.beginPath();g.moveTo(x+2,yy);g.lineTo(x+w-2,yy+Math.sin(yy*.55));g.stroke()}g.restore()}
+function drawRobot(g,x,y,w,h,r,facing=1,anim=0,inv=0,preview=false){g.save();if(inv>0&&Math.floor(inv*14)%2===0)g.globalAlpha=.35;const step=Math.sin(anim)*5,headH=h*.34,bodyY=y+headH*.88,bodyH=h*.42,legY=bodyY+bodyH*.88;g.translate(x+w/2,0);g.scale(facing,1);g.translate(-(x+w/2),0);
+rect(g,x+w*.16,y,w*.68,headH,r.body);texture(g,x+w*.16,y,w*.68,headH);rect(g,x+w*.24,y+headH*.26,w*.52,headH*.35,r.panel);g.fillStyle=r.eye;g.fillRect(x+w*.34,y+headH*.39,5,5);g.fillRect(x+w*.61,y+headH*.39,5,5);line(x+w*.43,y+headH*.57,x+w*.58,y+headH*.57,'#4a3425',2);
+rect(g,x+w*.2,bodyY,w*.6,bodyH,r.body);texture(g,x+w*.2,bodyY,w*.6,bodyH);g.fillStyle=r.tape;g.fillRect(x+w*.45,bodyY,w*.1,bodyH);g.fillStyle='#3b291d';g.font=`bold ${Math.max(10,w*.17)}px monospace`;g.textAlign='center';g.fillText(r.mark,x+w*.5,bodyY+bodyH*.62);
+const armY=bodyY+bodyH*.18;rect(g,x-w*.02,armY,w*.22,h*.11,r.panel);rect(g,x+w*.8,armY,w*.22,h*.11,r.panel);g.fillStyle=r.tape;g.fillRect(x+w*.1,armY,w*.06,h*.11);g.fillRect(x+w*.84,armY,w*.06,h*.11);
+rect(g,x+w*.23,legY+step,w*.2,h*.19,r.panel);rect(g,x+w*.57,legY-step,w*.2,h*.19,r.panel);g.fillStyle=r.tape;g.fillRect(x+w*.23,legY+h*.07+step,w*.2,h*.045);g.fillRect(x+w*.57,legY+h*.07-step,w*.2,h*.045);g.restore()}
+function drawEnemyRobot(g,x,y,w,h){g.save();rect(g,x,y,w,h,'#79563b');texture(g,x,y,w,h);rect(g,x+10,y+11,w-20,13,'#b99267');g.fillStyle='#251a13';g.fillRect(x+17,y+15,6,5);g.fillRect(x+w-23,y+15,6,5);line(x+19,y+h-12,x+w-19,y+h-12,'#251a13',3);g.restore()}
+function drawPlatform(g,x,y,w,h){if(x>W+80||x+w<-80)return;rect(g,x,y,w,h,h>60?'#96633a':'#af7744');texture(g,x,y,w,h);g.fillStyle='rgba(244,221,180,.28)';g.fillRect(x+4,y+4,w-8,7);for(let tx=x+70;tx<x+w;tx+=180){g.fillStyle='rgba(225,204,157,.67)';g.fillRect(tx,y-3,22,Math.min(h+3,18));g.strokeStyle='rgba(62,43,30,.35)';g.strokeRect(tx,y-3,22,Math.min(h+3,18))}}
+function drawSpikes(g,x,y,w,h){if(x>W||x+w<0)return;for(let i=0;i<Math.ceil(w/24);i++)poly(g,[[x+i*24,y+h],[x+i*24+12,y],[x+i*24+24,y+h]],'#6b4c36')}
+function drawBolt(g,x,y,t){g.save();g.translate(x,y);g.rotate(t);g.fillStyle='#4d4c46';for(let i=0;i<6;i++){g.rotate(Math.PI/3);g.fillRect(8,-4,8,8)}g.beginPath();g.arc(0,0,10,0,Math.PI*2);g.fillStyle='#77756c';g.fill();g.strokeStyle='#302820';g.lineWidth=2;g.stroke();g.beginPath();g.arc(0,0,4,0,Math.PI*2);g.fillStyle='#d7c8a7';g.fill();g.restore()}
+function drawGoal(g,x,y){g.save();rect(g,x,y,92,130,'#8c6039');rect(g,x+12,y+16,68,102,'#c38e52');g.fillStyle='#efe0b8';g.font='bold 13px monospace';g.textAlign='center';g.fillText('EXIT',x+46,y+52);g.fillStyle='#3a281d';g.beginPath();g.arc(x+68,y+72,4,0,Math.PI*2);g.fill();g.restore()}
+function drawBackground(){ctx.fillStyle='#d9caa9';ctx.fillRect(0,0,W,H);ctx.save();ctx.translate(-camX*.12,-camY*.08);for(let i=0;i<20;i++){const x=i*380-220,base=H+camY*.08-105,hh=90+(i%5)*35;poly(ctx,[[x,base],[x+50,base-hh*.5],[x+105,base-hh],[x+180,base-hh*.65],[x+265,base]],i%2?'#bca376':'#c3aa7d','#7c684c',1.3)}ctx.restore();ctx.save();ctx.translate(-camX*.05,0);ctx.globalAlpha=.7;for(let i=0;i<8;i++){const x=120+i*760,y=85+(i%3)*52;poly(ctx,[[x,y+20],[x+25,y+2],[x+63,y+8],[x+89,y-10],[x+130,y+4],[x+154,y+26],[x+112,y+34],[x+45,y+34]],'#eee0c7','#8b785f',1)}ctx.restore();ctx.globalAlpha=1;ctx.fillStyle='rgba(72,54,39,.09)';for(let y=30;y<H;y+=72)ctx.fillRect(0,y,W,1)}
+function drawWorld(){drawBackground();for(const p of platforms)Assets.drawPlatform(ctx,p);for(const s of spikes)Assets.drawHazard(ctx,s);for(const b of bolts)if(!b.got)Assets.drawCollectible(ctx,b);for(const e of enemies)if(e.alive)Assets.drawEnemy(ctx,e);Assets.drawGoal(ctx,6060,FLOOR-130);Assets.drawPlayer(ctx,player,ROBOTS[selected])}
+function loop(now){const dt=Math.min(.033,(now-last)/1000||0);last=now;update(dt);drawWorld();requestAnimationFrame(loop)}requestAnimationFrame(loop);showSelect();
+})();
+</script>
 </body>
 </html>
