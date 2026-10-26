@@ -2,13 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#251a13" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Cardboard Robot" />
+<meta name="mobile-web-app-capable" content="yes" />
 <title>Cardboard Robot</title>
 <style>
 :root{--ink:#251a13;--card:#b77d46;--paper:#ead9ba;--panel:#d2a66c;--tape:#dccb9d;--accent:#efc768}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#cab692;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink)}
 #game{display:block;width:100%;height:100%;touch-action:none;background:#d8c9aa}
 button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:focus-visible{outline:3px solid #fff7dc;outline-offset:3px}
+[hidden]{display:none!important}
 #hud{position:fixed;left:16px;top:14px;z-index:4;display:none;gap:10px;pointer-events:none}.tag{background:rgba(239,220,187,.9);border:2px solid #3a281d;padding:7px 10px;font-size:12px;font-weight:900;text-transform:uppercase;box-shadow:4px 4px 0 rgba(50,32,20,.18)}
 #brand{position:fixed;right:16px;top:14px;z-index:4;background:#b77d46;border:2px solid #3a281d;padding:7px 10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;box-shadow:4px 4px 0 rgba(50,32,20,.18);pointer-events:none}
 #hint{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:4;display:none;background:rgba(239,220,187,.9);border:2px solid #3a281d;padding:7px 10px;font-size:11px;font-weight:900;white-space:nowrap;box-shadow:4px 4px 0 rgba(50,32,20,.18);pointer-events:none}
@@ -18,23 +25,67 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #characters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.char{appearance:none;-webkit-appearance:none;text-align:left;background:#c39258;border:3px solid #3a281d;color:inherit;padding:10px;cursor:pointer;box-shadow:5px 5px 0 #76502f;min-width:0}.char:hover,.char.selected{background:#e0be7b;transform:translateY(-2px)}.char canvas{display:block;width:100%;height:auto;aspect-ratio:10/9;touch-action:manipulation;background:#dec79e;border:2px solid rgba(58,40,29,.55)}.char strong{display:block;margin-top:8px;text-transform:uppercase}.char span{font-size:11px;font-weight:800;opacity:.8}
 #actions{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:18px;flex-wrap:wrap}#play{position:relative;z-index:2;-webkit-appearance:none;font:inherit;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#251a13;background:#efc768;border:3px solid #3a281d;padding:13px 20px;box-shadow:5px 5px 0 #76502f;cursor:pointer}#play:active{transform:translate(3px,3px);box-shadow:2px 2px 0 #76502f}.small{font-size:11px;font-weight:800;max-width:520px;line-height:1.4}
 #result{display:none;text-align:center}#result h2{font-size:42px;margin:0 0 8px;text-transform:uppercase}#result button{font:inherit;font-weight:900;text-transform:uppercase;background:#efc768;border:3px solid #3a281d;padding:12px 18px;box-shadow:5px 5px 0 #76502f;cursor:pointer}
-@media(max-width:720px){#characters{grid-template-columns:repeat(2,minmax(0,1fr))}#menu{padding:16px;max-height:calc(100dvh - 24px);-webkit-overflow-scrolling:touch}#actions{display:block}#play{display:block;width:100%;min-height:52px;margin-top:14px}#hint{font-size:9px}.tag{font-size:10px}}
+html,body{overscroll-behavior:none}
+#game{position:fixed;inset:0;outline:none}
+#screen{padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+#menu{max-height:100%;max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#hud{top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));right:96px;flex-wrap:wrap;gap:6px}
+body[data-state="playing"] #brand,body[data-state="paused"] #brand{display:none}
+#toolbar{position:fixed;z-index:6;top:max(10px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right))}
+#toolbar button,#pauseView button{font:inherit;font-weight:900;min-height:44px;padding:10px 14px;border:2px solid #3a281d;background:#efc768;color:#251a13;border-radius:6px}
+#pauseView{text-align:center}#pauseView h2{font-size:32px;margin:0 0 12px}#pauseView .pause-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+#touchControls{position:fixed;inset:auto 0 0;z-index:5;display:none;align-items:end;justify-content:space-between;gap:12px;pointer-events:none;padding:12px max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:linear-gradient(transparent,rgba(67,43,24,.12))}
+.direction-pad{display:flex;gap:12px}.control{appearance:none;-webkit-appearance:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;pointer-events:auto;cursor:pointer;width:68px;height:68px;border:3px solid #3a281d;border-radius:16px;color:#251a13;background:rgba(239,220,187,.94);box-shadow:0 5px 0 #76502f;font:900 28px ui-monospace,monospace}
+.control[data-action="jump"]{width:88px;font-size:16px;background:#efc768}.control.held{transform:translateY(4px);box-shadow:0 1px 0 #76502f;background:#fff1c2}
+body.touch-device[data-state="playing"] #touchControls{display:flex}
+body.touch-device #hint{display:none!important}
+.mobile-help{display:none}body.touch-device .mobile-help{display:block;margin:12px 0 0;font-size:12px;font-weight:800}
+@media(max-width:720px){#characters{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.char{padding:6px}.char strong{font-size:12px}.char span{font-size:10px}#menu{padding:16px}#menu .lead{font-size:13px;margin-bottom:14px}#actions{display:flex;flex-direction:column-reverse;gap:14px}#play{display:block;width:100%;min-height:52px}#hint{font-size:9px}.tag{font-size:10px;padding:7px}}
+@media(max-height:500px) and (orientation:landscape){#menu{width:min(740px,92vw);padding:14px}#menu h1{font-size:28px}#menu .lead{font-size:12px;margin:6px 0 12px}#selectView{display:grid;grid-template-columns:1fr 1fr;column-gap:20px}#selectView h1,#selectView .lead{grid-column:1}#characters{grid-column:2;grid-row:1/5;align-self:center;gap:8px}.char{padding:6px}.char strong{font-size:12px}.char span{font-size:10px}#actions{grid-column:1;display:flex;flex-direction:column-reverse;margin-top:0;gap:10px}#actions .small{font-size:9px}#play{width:100%;padding:10px}.mobile-help{grid-column:1}.control{width:60px;height:60px}#touchControls{padding-top:6px}}
+
+/* Phone-first app shell: fixed surface, safe-area controls, scrollable menus. */
+html,body{position:fixed;inset:0;height:100%;width:100%;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body{background:#251a13}button{font-family:inherit}
+#screen{background:rgba(37,26,19,.48)}
+#menu{border-radius:24px;width:min(560px,100%);box-shadow:0 20px 70px #251a1366;padding:22px;border-width:2px}
+#menu h1{font-size:clamp(26px,7vw,42px);letter-spacing:-.03em}
+#menu .lead{font-size:14px;line-height:1.55}
+#characters{gap:10px}.char{border-radius:14px;box-shadow:0 4px 0 #76502f;padding:8px}.char canvas{border-radius:9px}.char.selected{outline:3px solid #fff1c2;outline-offset:2px}.char strong{font-size:13px}.char span{font-size:10px}
+#actions{flex-direction:column;gap:14px}#play{width:100%;border-radius:14px;min-height:56px;font-size:17px}.small{font-size:12px;line-height:1.5}
+#touchControls{padding-bottom:max(20px,env(safe-area-inset-bottom));padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+.control{width:72px;height:76px;border-radius:24px;background:rgba(239,220,187,.92);backdrop-filter:blur(12px)}
+.control[data-action="jump"]{width:92px;height:92px;border-radius:50%;font-size:17px}.direction-pad{gap:10px}
+.tag{border-radius:10px;font-size:11px;border-width:1px;box-shadow:none}#hud{right:84px}
+#toolbar button,#pauseView button,#result button{border-radius:14px;min-height:48px}#toolbar button{font-size:12px;padding:10px}
+#pauseView .pause-actions{flex-direction:column}#result h2{font-size:32px}
+.mobile-help{line-height:1.5;opacity:.8}#brand{display:none}
+@media(max-width:370px){.control{width:62px;height:70px}.direction-pad{gap:8px}#menu{padding:16px}.char{padding:5px}.char span{display:none}}
+@media(max-height:500px) and (orientation:landscape){#menu{width:min(740px,100%);padding:16px}#selectView{grid-template-columns:1fr 1fr}#menu h1{font-size:28px}#touchControls{padding-bottom:max(12px,env(safe-area-inset-bottom))}.control{height:60px;width:68px}.control[data-action="jump"]{height:72px;width:80px}}
+@media(prefers-reduced-motion:reduce){.char{transform:none!important}}
 </style>
 </head>
-<body>
+<body data-state="select">
 <div id="hud"><div class="tag" id="bolts">bolts 0 / 10</div><div class="tag" id="lives">tape 3</div><div class="tag" id="robotName">robot</div></div>
 <div id="brand">Cardboard Robot</div>
-<div id="hint">A / D or ← / → move • SPACE / W / ↑ jump • R restart • ESC character select</div>
-<canvas id="game"></canvas>
+<div id="hint">A / D or ← / → move • SPACE / W / ↑ jump • R restart • ESC pause</div>
+<canvas id="game" tabindex="-1" aria-label="Cardboard Robot platform game"></canvas>
+<div id="toolbar" hidden><button id="pauseButton" type="button">Pause</button></div>
+<div id="touchControls" aria-label="Game controls">
+  <div class="direction-pad"><button class="control" data-action="left" type="button" aria-label="Move left">&#8592;</button><button class="control" data-action="right" type="button" aria-label="Move right">&#8594;</button></div>
+  <button class="control" data-action="jump" type="button" aria-label="Jump">JUMP</button>
+</div>
 <div id="screen">
   <section id="menu">
     <div id="selectView">
       <h1>Choose your robot</h1>
-      <p class="lead">Pick a cardboard hero, then enter the procedural warehouse. Every visible game asset is drawn by a replaceable renderer so we can swap in final art later.</p>
+      <p class="lead">A little robot. A big warehouse. Collect bolts, hop over danger, and find your way home.</p>
       <div id="characters"></div>
-      <div id="actions"><div class="small">Prototype art: procedural Canvas 2D. Later: replace any renderer with PNG/WebP sprites, sprite sheets, or a Three.js/GLB layer without changing movement, collision, enemies, collectibles, or level data.</div><button id="play">Start Game</button></div>
+      <div id="actions"><div class="small">Collect all 10 bolts for Box Hero. You have 3 rolls of tape. Land on a platform to save a safe return point.</div><button id="play" type="button">Start Game</button></div>
+      <p class="mobile-help">Hold an arrow and tap JUMP with your other thumb. Hold JUMP for a higher leap. For an app-style launch, add this page to your Home Screen from your browser’s Share menu.</p>
+      <noscript><p>This game needs JavaScript. Open the hosted game page in Safari or Chrome, not a static file preview.</p></noscript>
     </div>
     <div id="result"><h2 id="resultTitle">Level Complete</h2><p id="resultText"></p><button id="again">Play Again</button></div>
+    <div id="pauseView" hidden><h2>Game paused</h2><p>Ready when you are.</p><div class="pause-actions"><button id="resumeButton" type="button">Resume</button><button id="restartButton" type="button">Restart</button><button id="menuButton" type="button">Robot menu</button></div></div>
   </section>
 </div>
 <script>
@@ -42,8 +93,13 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const screen=document.getElementById('screen'),selectView=document.getElementById('selectView'),result=document.getElementById('result');
 const hud=document.getElementById('hud'),hint=document.getElementById('hint'),boltsEl=document.getElementById('bolts'),livesEl=document.getElementById('lives'),robotNameEl=document.getElementById('robotName');
-let W=innerWidth,H=innerHeight,DPR=1,state='select',selected=0,last=performance.now(),camX=0,camY=0;
-function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=W*DPR;canvas.height=H*DPR;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0)} addEventListener('resize',resize);resize();
+const pauseView=document.getElementById('pauseView'),toolbar=document.getElementById('toolbar');
+let W=innerWidth,H=innerHeight,DPR=1,zoom=1,state='select',selected=0,last=performance.now(),camX=0,camY=0;
+let touchMode=navigator.maxTouchPoints>0||matchMedia('(pointer:coarse)').matches;
+document.body.classList.toggle('touch-device',touchMode);
+// Physics remains in world units. Small screens zoom out instead of cropping the floor.
+function resize(){const viewport=window.visualViewport;const width=Math.round(viewport?viewport.width:innerWidth),height=Math.round(viewport?viewport.height:innerHeight);DPR=Math.min(devicePixelRatio||1,2);zoom=Math.min(1,width/520,height/650);W=width/zoom;H=height/zoom;canvas.width=Math.round(width*DPR);canvas.height=Math.round(height*DPR);canvas.style.width=width+'px';canvas.style.height=height+'px';ctx.setTransform(DPR*zoom,0,0,DPR*zoom,0,0);clearInputs();updateCamera(1,true)}
+addEventListener('resize',resize);if(window.visualViewport)visualViewport.addEventListener('resize',resize);
 
 // ---------- ASSET SWAP LAYER ----------
 // Gameplay calls these functions only. Replace any function later with image/GLB rendering.
@@ -55,21 +111,31 @@ const Assets={
   drawCollectible:(g,b)=>drawBolt(g,b.x-camX,b.y-camY,b.t),
   drawGoal:(g,x,y)=>drawGoal(g,x-camX,y-camY)
 };
+window.CardboardRobotRenderers={
+ register(name,draw){if(!(name in Assets)||typeof draw!=='function')throw new TypeError('Expected an existing renderer name and drawing function');Assets[name]=draw},
+ names:Object.keys(Assets),
+ getView(){return {cameraX:camX,cameraY:camY,width:W,height:H,zoom,pixelRatio:DPR}}
+};
 const ROBOTS=[
 {name:'Patch',body:'#b67a43',panel:'#d7aa72',tape:'#dfcfaa',eye:'#1f211f',mark:'P',desc:'balanced explorer'},
-{name:'Crate',body:'#986237',panel:'#c58d55',tape:'#e5d6b5',eye:'#37261b',mark:'C',desc:'heavy box bot'},
-{name:'Fold',body:'#c7955d',panel:'#e0b881',tape:'#ceb98d',eye:'#20221f',mark:'F',desc:'quick prototype'},
+{name:'Crate',body:'#986237',panel:'#c58d55',tape:'#e5d6b5',eye:'#37261b',mark:'C',desc:'sturdy cardboard pal'},
+{name:'Fold',body:'#c7955d',panel:'#e0b881',tape:'#ceb98d',eye:'#20221f',mark:'F',desc:'bright little explorer'},
 ];
 
 const previews=document.getElementById('characters');
-function bindTap(el,handler){let lastTouch=0;el.addEventListener('touchend',e=>{lastTouch=Date.now();e.preventDefault();handler(e)},{passive:false});el.addEventListener('click',e=>{if(Date.now()-lastTouch<700)return;handler(e)})}
-ROBOTS.forEach((r,i)=>{const b=document.createElement('button');b.className='char'+(i===0?' selected':'');b.type='button';const pc=document.createElement('canvas');pc.width=200;pc.height=180;b.appendChild(pc);const strong=document.createElement('strong');strong.textContent=r.name;b.appendChild(strong);const sp=document.createElement('span');sp.textContent=r.desc;b.appendChild(sp);bindTap(b,()=>{selected=i;Array.prototype.forEach.call(previews.children,(n,j)=>n.classList.toggle('selected',j===i))});previews.appendChild(b);const pg=pc.getContext('2d');pg.fillStyle='#dec79e';pg.fillRect(0,0,200,180);drawRobot(pg,68,24,64,118,r,1,.4,0,true)});
+// Native button clicks handle taps, mouse, and keyboard without firing during menu scroll.
+function bindTap(el,handler){el.addEventListener('click',handler)}
+ROBOTS.forEach((r,i)=>{const b=document.createElement('button');b.setAttribute('aria-pressed',i===0?'true':'false');b.className='char'+(i===0?' selected':'');b.type='button';const pc=document.createElement('canvas');pc.width=200;pc.height=180;b.appendChild(pc);const strong=document.createElement('strong');strong.textContent=r.name;b.appendChild(strong);const sp=document.createElement('span');sp.textContent=r.desc;b.appendChild(sp);bindTap(b,()=>{selected=i;Array.prototype.forEach.call(previews.children,(n,j)=>(n.classList.toggle('selected',j===i),n.setAttribute('aria-pressed',j===i?'true':'false')))});previews.appendChild(b);const pg=pc.getContext('2d');pg.fillStyle='#dec79e';pg.fillRect(0,0,200,180);drawRobot(pg,68,24,64,118,r,1,.4,0,true)});
 
 const playButton=document.getElementById('play'),againButton=document.getElementById('again');
-bindTap(playButton,startGame);bindTap(againButton,showSelect);
-function showSelect(){state='select';screen.style.display='flex';selectView.style.display='block';result.style.display='none';hud.style.display='none';hint.style.display='none'}
-function showResult(title,text){state='result';document.getElementById('resultTitle').textContent=title;document.getElementById('resultText').textContent=text;screen.style.display='flex';selectView.style.display='none';result.style.display='block';hud.style.display='none';hint.style.display='none'}
-function startGame(){if(state==='playing')return;resetWorld();state='playing';screen.style.display='none';hud.style.display='flex';hint.style.display='block';robotNameEl.textContent=ROBOTS[selected].name;last=performance.now();canvas.focus({preventScroll:true})}
+bindTap(playButton,startGame);bindTap(againButton,startGame);
+bindTap(document.getElementById('pauseButton'),pauseGame);bindTap(document.getElementById('resumeButton'),resumeGame);bindTap(document.getElementById('restartButton'),startGame);bindTap(document.getElementById('menuButton'),showSelect);
+function syncUI(){document.body.dataset.state=state;screen.style.display=state==='playing'?'none':'flex';selectView.hidden=state!=='select';result.style.display=state==='result'?'block':'none';pauseView.hidden=state!=='paused';toolbar.hidden=state!=='playing';hud.style.display=state==='playing'||state==='paused'?'flex':'none';hint.style.display=state==='playing'?'block':'none'}
+function showSelect(){clearInputs();state='select';syncUI()}
+function showResult(title,text){clearInputs();state='result';document.getElementById('resultTitle').textContent=title;document.getElementById('resultText').textContent=text;syncUI()}
+function startGame(){clearInputs();resetWorld();state='playing';robotNameEl.textContent=ROBOTS[selected].name;last=performance.now();syncUI();canvas.focus({preventScroll:true})}
+function pauseGame(){if(state!=='playing')return;clearInputs();state='paused';syncUI()}
+function resumeGame(){if(state!=='paused')return;clearInputs();state='playing';last=performance.now();syncUI();canvas.focus({preventScroll:true})}
 
 const WORLD_W=6200,FLOOR=760;
 const platformSeed=[[-250,FLOOR,1050,160],[900,665,340,44],[1320,575,300,44],[1690,695,470,90],[2240,600,310,44],[2630,510,350,44],[3070,670,550,90],[3700,590,320,44],[4090,500,330,44],[4510,645,510,100],[5100,555,360,44],[5540,665,300,44],[5920,FLOOR,520,160]];
@@ -78,19 +144,53 @@ const boltSeed=[[365,635],[1050,590],[1450,500],[1910,610],[2390,520],[2790,430]
 const enemySeed=[{x:1770,y:645,min:1740,max:2070},{x:3150,y:620,min:3120,max:3520},{x:4570,y:595,min:4540,max:4940},{x:5160,y:505,min:5130,max:5400}];
 let platforms=[],spikes=[],bolts=[],enemies=[];
 const player={x:120,y:590,w:58,h:96,vx:0,vy:0,onGround:false,coyote:0,jumpBuffer:0,facing:1,anim:0,lives:3,got:0,invuln:0,spawnX:120,spawnY:590};
-function resetWorld(){platforms=platformSeed.map(v=>({x:v[0],y:v[1],w:v[2],h:v[3]}));spikes=spikeSeed.map(v=>({x:v[0],y:v[1],w:v[2],h:v[3]}));bolts=boltSeed.map((v,i)=>({x:v[0],y:v[1],t:i*.6,got:false}));enemies=enemySeed.map((e,i)=>({...e,w:58,h:48,vx:(i%2? -1:1)*62,alive:true}));Object.assign(player,{x:120,y:590,vx:0,vy:0,onGround:false,coyote:0,jumpBuffer:0,facing:1,anim:0,lives:3,got:0,invuln:0});camX=0;camY=0;updateHUD()}
+function resetWorld(){clearInputs();platforms=platformSeed.map(v=>({x:v[0],y:v[1],w:v[2],h:v[3]}));spikes=spikeSeed.map(v=>({x:v[0],y:v[1],w:v[2],h:v[3]}));bolts=boltSeed.map((v,i)=>({x:v[0],y:v[1],t:i*.6,got:false}));enemies=enemySeed.map((e,i)=>({...e,w:58,h:48,vx:(i%2? -1:1)*62,alive:true}));Object.assign(player,{x:120,y:590,vx:0,vy:0,onGround:false,coyote:0,jumpBuffer:0,facing:1,anim:0,lives:3,got:0,invuln:0,spawnX:120,spawnY:590});updateCamera(1,true);updateHUD()}
 function updateHUD(){boltsEl.textContent=`bolts ${player.got} / ${bolts.length}`;livesEl.textContent=`tape ${player.lives}`}
 
-const keys={};addEventListener('keydown',e=>{keys[e.code]=true;if(['ArrowLeft','ArrowRight','ArrowUp','Space'].includes(e.code))e.preventDefault();if(e.code==='KeyR'&&state==='playing')resetWorld();if(e.code==='Escape'&&state==='playing')showSelect()},{passive:false});addEventListener('keyup',e=>keys[e.code]=false);
-let touchDir=0,touchJump=false;canvas.addEventListener('pointerdown',e=>{if(state!=='playing')return;if(e.clientX>W*.62)touchJump=true;else touchDir=e.clientX<W*.31?-1:1});canvas.addEventListener('pointerup',()=>{touchDir=0;touchJump=false});canvas.addEventListener('pointercancel',()=>{touchDir=0;touchJump=false});
+const keys={},heldPointers=new Map(),touch={left:false,right:false,jump:false};
+const controlButtons=Array.from(document.querySelectorAll('.control'));
+const jumpKeys=['Space','ArrowUp','KeyW'];
+function syncTouch(){const wasJumping=touch.jump;touch.left=touch.right=touch.jump=false;heldPointers.forEach(held=>touch[held.action]=true);controlButtons.forEach(button=>button.classList.toggle('held',touch[button.dataset.action]));if(touch.jump&&!wasJumping)player.jumpBuffer=.12}
+function holdControl(id,button){if(state!=='playing')return;heldPointers.set(id,{action:button.dataset.action,button});syncTouch()}
+function releaseControl(id){heldPointers.delete(id);syncTouch()}
+function clearInputs(){Object.keys(keys).forEach(key=>delete keys[key]);heldPointers.clear();touch.left=touch.right=touch.jump=false;controlButtons.forEach(button=>button.classList.remove('held'));player.jumpBuffer=0}
+// Track every finger separately: releasing Jump must not release an arrow.
+controlButtons.forEach(button=>{
+  button.addEventListener('contextmenu',e=>e.preventDefault());
+  if(window.PointerEvent){
+    button.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();holdControl(e.pointerId,button);try{button.setPointerCapture(e.pointerId)}catch(_){}});
+    button.addEventListener('pointermove',e=>{
+      const held=heldPointers.get(e.pointerId);if(!held||held.action==='jump')return;
+      const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('.control');
+      if(target&&target.dataset.action!=='jump'){heldPointers.set(e.pointerId,{action:target.dataset.action,button:target});syncTouch()}
+    });
+    button.addEventListener('lostpointercapture',e=>releaseControl(e.pointerId));
+  }else{
+    button.addEventListener('touchstart',e=>{e.preventDefault();Array.from(e.changedTouches).forEach(t=>holdControl('touch-'+t.identifier,button))},{passive:false});
+    button.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+    ['touchend','touchcancel'].forEach(type=>button.addEventListener(type,e=>{e.preventDefault();Array.from(e.changedTouches).forEach(t=>releaseControl('touch-'+t.identifier))},{passive:false}));
+  }
+});
+addEventListener('pointerup',e=>releaseControl(e.pointerId));addEventListener('pointercancel',e=>releaseControl(e.pointerId));
+addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&!touchMode){touchMode=true;document.body.classList.add('touch-device');resize()}},{capture:true});
+addEventListener('keydown',e=>{if(e.code==='Escape'){if(state==='playing')pauseGame();else if(state==='paused')resumeGame();return}if(state!=='playing')return;if(['ArrowLeft','ArrowRight','ArrowUp','Space'].includes(e.code))e.preventDefault();if(jumpKeys.includes(e.code)&&!keys[e.code])player.jumpBuffer=.12;keys[e.code]=true;if(e.code==='KeyR'&&!e.repeat)resetWorld()},{passive:false});
+addEventListener('keyup',e=>{delete keys[e.code]});
+addEventListener('blur',()=>{clearInputs();pauseGame()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){clearInputs();pauseGame()}});
+addEventListener('pagehide',()=>{clearInputs();pauseGame()});
 function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
-function damage(){if(player.invuln>0||state!=='playing')return;player.lives--;updateHUD();if(player.lives<=0){showResult('Flattened!','Your robot ran out of packing tape.');return}player.x=Math.max(40,player.x-135);player.y=Math.min(player.y,500);player.vx=-220;player.vy=-360;player.invuln=1.35}
-function update(dt){if(state!=='playing')return;player.invuln=Math.max(0,player.invuln-dt);const left=keys.ArrowLeft||keys.KeyA||touchDir<0,right=keys.ArrowRight||keys.KeyD||touchDir>0,jump=keys.Space||keys.ArrowUp||keys.KeyW||touchJump,input=(right?1:0)-(left?1:0);player.vx+=input*(player.onGround?2200:1250)*dt;if(!input)player.vx*=Math.pow(player.onGround ? .0005 : .07,dt);player.vx=clamp(player.vx,-350,350);if(input)player.facing=input;
-player.jumpBuffer = jump ? .12 : Math.max(0, player.jumpBuffer-dt);player.coyote = player.onGround ? .12 : Math.max(0, player.coyote-dt);if(player.jumpBuffer>0&&player.coyote>0){player.vy=-590;player.onGround=false;player.coyote=0;player.jumpBuffer=0}if(!jump&&player.vy<0)player.vy+=1100*dt;player.vy=Math.min(player.vy+1500*dt,900);
-player.x+=player.vx*dt;for(const p of platforms)if(overlap(player,p)){if(player.vx>0)player.x=p.x-player.w;else if(player.vx<0)player.x=p.x+p.w;player.vx=0}player.y+=player.vy*dt;player.onGround=false;for(const p of platforms)if(overlap(player,p)){if(player.vy>0){player.y=p.y-player.h;player.vy=0;player.onGround=true}else if(player.vy<0){player.y=p.y+p.h;player.vy=0}}if(player.y>980)damage();for(const s of spikes)if(overlap(player,s))damage();
+function damage(fell=false){if(player.invuln>0||state!=='playing')return;player.lives--;updateHUD();if(player.lives<=0){showResult('Flattened!','Your robot ran out of packing tape.');return}player.x=player.spawnX;player.y=player.spawnY;player.vx=0;player.vy=0;clearInputs();player.invuln=1.35;updateCamera(1,true)}
+function update(dt){if(state!=='playing')return;player.invuln=Math.max(0,player.invuln-dt);const left=keys.ArrowLeft||keys.KeyA||touch.left,right=keys.ArrowRight||keys.KeyD||touch.right,jump=keys.Space||keys.ArrowUp||keys.KeyW||touch.jump,input=(right?1:0)-(left?1:0);player.vx+=input*(player.onGround?2200:1250)*dt;if(!input)player.vx*=Math.pow(player.onGround ? .0005 : .07,dt);player.vx=clamp(player.vx,-350,350);if(input)player.facing=input;
+player.jumpBuffer = Math.max(0, player.jumpBuffer-dt);player.coyote = player.onGround ? .12 : Math.max(0, player.coyote-dt);if(player.jumpBuffer>0&&player.coyote>0){player.vy=-590;player.onGround=false;player.coyote=0;player.jumpBuffer=0}if(!jump&&player.vy<0)player.vy+=1100*dt;player.vy=Math.min(player.vy+1500*dt,900);
+player.x+=player.vx*dt;for(const p of platforms)if(overlap(player,p)){if(player.vx>0)player.x=p.x-player.w;else if(player.vx<0)player.x=p.x+p.w;player.vx=0}player.y+=player.vy*dt;player.onGround=false;for(const p of platforms)if(overlap(player,p)){if(player.vy>0){player.y=p.y-player.h;player.vy=0;player.onGround=true;
+// Save a return position only where there is room and no nearby enemy.
+if(p.w>=250&&player.x>p.x+20&&player.x+player.w<p.x+p.w-20&&!enemies.some(e=>e.alive&&Math.abs(e.x-player.x)<150)){
+player.spawnX=player.x;player.spawnY=p.y-player.h-2;
+}}else if(player.vy<0){player.y=p.y+p.h;player.vy=0}}if(player.y>980)damage(true);for(const s of spikes)if(overlap(player,s))damage();
 for(const b of bolts){if(b.got)continue;b.t+=dt*3;if(overlap(player,{x:b.x-15,y:b.y-15,w:30,h:30})){b.got=true;player.got++;updateHUD()}}
 for(const e of enemies){if(!e.alive)continue;e.x+=e.vx*dt;if(e.x<e.min){e.x=e.min;e.vx=Math.abs(e.vx)}if(e.x>e.max){e.x=e.max;e.vx=-Math.abs(e.vx)}if(overlap(player,e)){if(player.vy>120&&player.y+player.h-e.y<28){e.alive=false;player.vy=-370}else damage()}}
-if(player.x>6035){showResult(player.got===bolts.length?'Box Hero!':'Level Complete!',`You recovered ${player.got} of ${bolts.length} bolts.`)}player.anim+=Math.abs(player.vx)*dt*.025;const targetX=player.x-W*.34;camX+=((targetX)-camX)*Math.min(1,dt*5.5);camX=clamp(camX,0,Math.max(0,WORLD_W-W));const targetY=Math.max(0,player.y-H*.55);camY+=((targetY)-camY)*Math.min(1,dt*3);camY=clamp(camY,0,190)}
+if(player.x>6035){showResult(player.got===bolts.length?'Box Hero!':'Level Complete!',`You recovered ${player.got} of ${bolts.length} bolts.`)}player.anim+=Math.abs(player.vx)*dt*.025;updateCamera(dt)}
+function updateCamera(dt,snap=false){const targetX=clamp(player.x-W*.34,0,Math.max(0,WORLD_W-W));const usableHeight=H-(touchMode?120/zoom:32);const targetY=clamp(player.y+player.h-usableHeight*.68,0,Math.max(0,FLOOR+160-usableHeight));camX+=(targetX-camX)*(snap?1:Math.min(1,dt*5.5));camY+=(targetY-camY)*(snap?1:Math.min(1,dt*6))}
 
 function line(x1,y1,x2,y2,c='#3b291d',w=2){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}function rect(g,x,y,w,h,fill,stroke='#3b291d',lw=2){g.fillStyle=fill;g.fillRect(x,y,w,h);g.strokeStyle=stroke;g.lineWidth=lw;g.strokeRect(x,y,w,h)}function poly(g,pts,fill,stroke='#3b291d',lw=2){g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.closePath();g.fillStyle=fill;g.fill();g.strokeStyle=stroke;g.lineWidth=lw;g.stroke()}
 function texture(g,x,y,w,h){g.save();g.globalAlpha=.14;g.strokeStyle='#6e4a2d';g.lineWidth=1;for(let yy=y+6;yy<y+h;yy+=8){g.beginPath();g.moveTo(x+2,yy);g.lineTo(x+w-2,yy+Math.sin(yy*.55));g.stroke()}g.restore()}
@@ -106,7 +206,10 @@ function drawBolt(g,x,y,t){g.save();g.translate(x,y);g.rotate(t);g.fillStyle='#4
 function drawGoal(g,x,y){g.save();rect(g,x,y,92,130,'#8c6039');rect(g,x+12,y+16,68,102,'#c38e52');g.fillStyle='#efe0b8';g.font='bold 13px monospace';g.textAlign='center';g.fillText('EXIT',x+46,y+52);g.fillStyle='#3a281d';g.beginPath();g.arc(x+68,y+72,4,0,Math.PI*2);g.fill();g.restore()}
 function drawBackground(){ctx.fillStyle='#d9caa9';ctx.fillRect(0,0,W,H);ctx.save();ctx.translate(-camX*.12,-camY*.08);for(let i=0;i<20;i++){const x=i*380-220,base=H+camY*.08-105,hh=90+(i%5)*35;poly(ctx,[[x,base],[x+50,base-hh*.5],[x+105,base-hh],[x+180,base-hh*.65],[x+265,base]],i%2?'#bca376':'#c3aa7d','#7c684c',1.3)}ctx.restore();ctx.save();ctx.translate(-camX*.05,0);ctx.globalAlpha=.7;for(let i=0;i<8;i++){const x=120+i*760,y=85+(i%3)*52;poly(ctx,[[x,y+20],[x+25,y+2],[x+63,y+8],[x+89,y-10],[x+130,y+4],[x+154,y+26],[x+112,y+34],[x+45,y+34]],'#eee0c7','#8b785f',1)}ctx.restore();ctx.globalAlpha=1;ctx.fillStyle='rgba(72,54,39,.09)';for(let y=30;y<H;y+=72)ctx.fillRect(0,y,W,1)}
 function drawWorld(){drawBackground();for(const p of platforms)Assets.drawPlatform(ctx,p);for(const s of spikes)Assets.drawHazard(ctx,s);for(const b of bolts)if(!b.got)Assets.drawCollectible(ctx,b);for(const e of enemies)if(e.alive)Assets.drawEnemy(ctx,e);Assets.drawGoal(ctx,6060,FLOOR-130);Assets.drawPlayer(ctx,player,ROBOTS[selected])}
-function loop(now){const dt=Math.min(.033,(now-last)/1000||0);last=now;update(dt);drawWorld();requestAnimationFrame(loop)}requestAnimationFrame(loop);showSelect();
+let accumulator=0;
+function loop(now){const dt=Math.min(.05,(now-last)/1000||0);last=now;
+if(state==='playing'){accumulator+=dt;while(accumulator>=1/120){update(1/120);accumulator-=1/120}}else accumulator=0;
+drawWorld();requestAnimationFrame(loop)}resize();resetWorld();showSelect();requestAnimationFrame(loop);
 })();
 </script>
 </body>
