@@ -25,9 +25,63 @@ canvas {
     width: 100%;
     height: auto;
 }
+
+/* Corner navigation and footer; existing stage layout is unchanged. */
+.polysprite-nav {
+    position: fixed;
+    top: max(16px, env(safe-area-inset-top));
+    right: max(20px, env(safe-area-inset-right));
+    z-index: 10;
+    font: 14px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #eee;
+}
+.polysprite-nav details { position: relative; }
+.polysprite-nav summary {
+    display: flex; align-items: center; gap: 10px;
+    min-height: 44px; padding: 0 14px;
+    cursor: pointer; list-style: none;
+    border: 1px solid #444; border-radius: 8px;
+    background: #000; touch-action: manipulation;
+}
+.polysprite-nav summary::-webkit-details-marker { display: none; }
+.polysprite-nav summary::after { content: "⌄"; }
+.polysprite-nav details[open] summary::after { content: "⌃"; }
+.polysprite-nav summary:focus-visible, .polysprite-nav a:focus-visible {
+    outline: 2px solid #fff; outline-offset: 4px;
+}
+.polysprite-games-list {
+    position: absolute; top: calc(100% + 8px); right: 0;
+    width: min(220px, calc(100vw - 40px));
+    margin: 0; padding: 6px; list-style: none;
+    background: #111; border: 1px solid #444; border-radius: 8px;
+    box-shadow: 0 12px 28px #0008;
+}
+.polysprite-games-list a {
+    display: flex; align-items: center; min-height: 44px;
+    padding: 0 12px; color: #eee; text-decoration: none; border-radius: 4px;
+}
+.polysprite-games-list a:hover { background: #292929; }
+.polysprite-copyright {
+    position: fixed; left: 16px; right: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    margin: 0; text-align: center; color: #888;
+    font: 11px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    pointer-events: none;
+}
 </style>
 </head>
 <body>
+
+<nav class="polysprite-nav" aria-label="Games">
+    <details id="polysprite-games">
+        <summary>Games</summary>
+        <ul class="polysprite-games-list">
+            <li><a href="CardboardRobot.html">Cardboard Robot</a></li>
+        </ul>
+    </details>
+</nav>
+<footer class="polysprite-copyright"><small>© 2026 Polysprite. All rights reserved.</small></footer>
+
 
 <div id="stage">
     <canvas id="logoCanvas" aria-label="Polysprite pixel logo"></canvas>
@@ -169,6 +223,22 @@ function render() {
 }
 
 source.onload = render;
+</script>
+
+
+<script>
+(() => {
+    const menu = document.getElementById("polysprite-games");
+    document.addEventListener("click", event => {
+        if (!menu.contains(event.target)) menu.open = false;
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && menu.open) {
+            menu.open = false;
+            menu.querySelector("summary").focus();
+        }
+    });
+})();
 </script>
 
 </body>
